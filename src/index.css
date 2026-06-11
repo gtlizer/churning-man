@@ -1,0 +1,72 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@keyframes cow-walk {
+  from { transform: translateX(-120px); }
+  to   { transform: translateX(calc(100vw + 150px)); }
+}
+@keyframes cow-bob {
+  0%, 100% { margin-bottom: 0px; }
+  50%       { margin-bottom: 8px; }
+}
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  :root {
+    /* Default: warm sandy-rose + white + soft rose. All values are "R G B" for Tailwind opacity support. */
+    --c-playa:       237 213 204; /* #EDD5CC — warm sandy-rose body */
+    --c-playa-light: 255 255 255; /* #FFFFFF — white surface */
+    --c-playa-mid:   229 197 184; /* #E5C5B8 — soft warm border */
+    --c-plum:        42 26 24;    /* #2A1A18 — near-black text */
+    --c-mauve:       160 136 128; /* #A08880 — warm muted rose */
+    --c-neon:        232 96 122;  /* #E8607A — soft rose accent */
+  }
+
+  body {
+    @apply bg-playa text-plum font-body;
+  }
+}
+
+
+@layer components {
+  .card {
+    @apply bg-playa-light border border-playa-mid rounded-2xl;
+    box-shadow: 0 2px 12px rgba(160, 80, 80, 0.08);
+  }
+
+  .card-hover {
+    @apply card transition-all duration-200 hover:brightness-125 hover:border-neon/40 hover:scale-[1.01] cursor-pointer;
+  }
+
+  .btn-primary {
+    @apply bg-neon hover:opacity-85 text-white font-bold py-2.5 px-5 rounded-xl transition-all duration-200 font-body active:scale-95 text-sm;
+  }
+
+  .btn-secondary {
+    @apply bg-playa-light hover:brightness-125 text-plum border border-playa-mid font-semibold py-2.5 px-5 rounded-xl transition-all duration-200 font-body active:scale-95 text-sm;
+  }
+
+  .input {
+    @apply bg-playa-light border border-playa-mid rounded-xl px-4 py-2.5 text-plum placeholder-mauve/50 focus:outline-none focus:border-neon/60 focus:ring-2 focus:ring-neon/10 transition-all duration-200 font-body text-sm w-full;
+  }
+
+  .select {
+    @apply bg-playa-light border border-playa-mid rounded-xl px-4 py-2.5 text-plum focus:outline-none focus:border-neon/60 transition-all duration-200 font-body text-sm w-full;
+  }
+
+  .badge {
+    @apply text-xs font-bold px-2.5 py-0.5 rounded-full border;
+  }
+
+  .section-title {
+    @apply text-3xl font-display text-plum mb-1;
+  }
+
+  .section-subtitle {
+    @apply text-mauve text-sm font-body mb-6;
+  }
+}

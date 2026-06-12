@@ -1,6 +1,11 @@
 import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
+import { collection, onSnapshot, addDoc, deleteDoc, updateDoc, doc } from 'firebase/firestore'
+import { db } from '../lib/firebase'
 import type { GearItem } from '../types'
+
+function clean(obj: object): Record<string, unknown> {
+  return Object.fromEntries(Object.entries(obj).filter(([, v]) => v !== undefined))
+}
 
 interface GearStore {
   items: GearItem[]
@@ -10,27 +15,18 @@ interface GearStore {
   updateItem: (id: string, updates: Partial<GearItem>) => void
 }
 
-export const useGearStore = create<GearStore>()(
-  persist(
-    (set) => ({
-      items: [],
-      addItem: (item) =>
-        set((state) => ({
-          items: [{ ...item, id: crypto.randomUUID() }, ...state.items],
-        })),
-      deleteItem: (id) =>
-        set((state) => ({
-          items: state.items.filter((i) => i.id !== id),
-        })),
-      togglePacked: (id) =>
-        set((state) => ({
-          items: state.items.map((i) => (i.id === id ? { ...i, packed: !i.packed } : i)),
-        })),
-      updateItem: (id, updates) =>
-        set((state) => ({
-          items: state.items.map((i) => (i.id === id ? { ...i, ...updates } : i)),
-        })),
-    }),
-    { name: 'churning-man-gear' }
-  )
-)
+export const useGearStore = create<GearStore>()(() => ({
+  items: [],
+  addItem:    (item)         => { void addDoc(collection(db, 'gear'), clean(item)) },
+  deleteItem: (id)           => { void deleteDoc(doc(db, 'gear', id)) },
+  togglePacked: (id) => {
+    const item = useGearStore.getState().items.find(i => i.id === id)
+    if (item) void updateDoc(doc(db, 'gear', id), { packed: !item.packed })
+  },
+  updateItem: (id, updates)  => { void updateDoc(doc(db, 'gear', id), clean(updates)) },
+}))
+
+onSnapshot(collection(db, 'gear'), (snap) => {
+  const items = snap.docs.map(d => ({ ...d.data(), id: d.id } as GearItem))
+  useGearStore.setState({ items })
+})

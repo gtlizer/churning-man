@@ -1,6 +1,11 @@
 import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
+import { collection, onSnapshot, addDoc, deleteDoc, updateDoc, doc } from 'firebase/firestore'
+import { db } from '../lib/firebase'
 import type { Expense } from '../types'
+
+function clean(obj: object): Record<string, unknown> {
+  return Object.fromEntries(Object.entries(obj).filter(([, v]) => v !== undefined))
+}
 
 interface ExpenseStore {
   expenses: Expense[]
@@ -9,23 +14,14 @@ interface ExpenseStore {
   updateExpense: (id: string, updates: Partial<Expense>) => void
 }
 
-export const useExpenseStore = create<ExpenseStore>()(
-  persist(
-    (set) => ({
-      expenses: [],
-      addExpense: (expense) =>
-        set((state) => ({
-          expenses: [{ ...expense, id: crypto.randomUUID() }, ...state.expenses],
-        })),
-      deleteExpense: (id) =>
-        set((state) => ({
-          expenses: state.expenses.filter((e) => e.id !== id),
-        })),
-      updateExpense: (id, updates) =>
-        set((state) => ({
-          expenses: state.expenses.map((e) => (e.id === id ? { ...e, ...updates } : e)),
-        })),
-    }),
-    { name: 'churning-man-expenses' }
-  )
-)
+export const useExpenseStore = create<ExpenseStore>()(() => ({
+  expenses: [],
+  addExpense:    (expense)       => { void addDoc(collection(db, 'expenses'), clean(expense)) },
+  deleteExpense: (id)            => { void deleteDoc(doc(db, 'expenses', id)) },
+  updateExpense: (id, updates)   => { void updateDoc(doc(db, 'expenses', id), clean(updates)) },
+}))
+
+onSnapshot(collection(db, 'expenses'), (snap) => {
+  const expenses = snap.docs.map(d => ({ ...d.data(), id: d.id } as Expense))
+  useExpenseStore.setState({ expenses })
+})

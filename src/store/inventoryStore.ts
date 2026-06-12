@@ -1,6 +1,11 @@
 import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
+import { collection, onSnapshot, addDoc, deleteDoc, updateDoc, doc } from 'firebase/firestore'
+import { db } from '../lib/firebase'
 import type { IceCreamItem } from '../types'
+
+function clean(obj: object): Record<string, unknown> {
+  return Object.fromEntries(Object.entries(obj).filter(([, v]) => v !== undefined))
+}
 
 interface InventoryStore {
   items: IceCreamItem[]
@@ -9,23 +14,14 @@ interface InventoryStore {
   updateQuantity: (id: string, quantity: number) => void
 }
 
-export const useInventoryStore = create<InventoryStore>()(
-  persist(
-    (set) => ({
-      items: [],
-      addItem: (item) =>
-        set((state) => ({
-          items: [{ ...item, id: crypto.randomUUID() }, ...state.items],
-        })),
-      deleteItem: (id) =>
-        set((state) => ({
-          items: state.items.filter((i) => i.id !== id),
-        })),
-      updateQuantity: (id, quantity) =>
-        set((state) => ({
-          items: state.items.map((i) => (i.id === id ? { ...i, quantity } : i)),
-        })),
-    }),
-    { name: 'churning-man-inventory' }
-  )
-)
+export const useInventoryStore = create<InventoryStore>()(() => ({
+  items: [],
+  addItem:    (item)              => { void addDoc(collection(db, 'inventory'), clean(item)) },
+  deleteItem: (id)                => { void deleteDoc(doc(db, 'inventory', id)) },
+  updateQuantity: (id, quantity)  => { void updateDoc(doc(db, 'inventory', id), { quantity }) },
+}))
+
+onSnapshot(collection(db, 'inventory'), (snap) => {
+  const items = snap.docs.map(d => ({ ...d.data(), id: d.id } as IceCreamItem))
+  useInventoryStore.setState({ items })
+})

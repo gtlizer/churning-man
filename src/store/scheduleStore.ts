@@ -1,6 +1,12 @@
 import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
+import { collection, onSnapshot, addDoc, deleteDoc, updateDoc, doc } from 'firebase/firestore'
+import { db } from '../lib/firebase'
 import type { ScheduleEvent } from '../types'
+
+// Firestore rejects undefined values — strip them before writing
+function clean(obj: object): Record<string, unknown> {
+  return Object.fromEntries(Object.entries(obj).filter(([, v]) => v !== undefined))
+}
 
 interface ScheduleStore {
   events: ScheduleEvent[]
@@ -9,23 +15,14 @@ interface ScheduleStore {
   updateEvent: (id: string, updates: Partial<ScheduleEvent>) => void
 }
 
-export const useScheduleStore = create<ScheduleStore>()(
-  persist(
-    (set) => ({
-      events: [],
-      addEvent: (event) =>
-        set((state) => ({
-          events: [{ ...event, id: crypto.randomUUID() }, ...state.events],
-        })),
-      deleteEvent: (id) =>
-        set((state) => ({
-          events: state.events.filter((e) => e.id !== id),
-        })),
-      updateEvent: (id, updates) =>
-        set((state) => ({
-          events: state.events.map((e) => (e.id === id ? { ...e, ...updates } : e)),
-        })),
-    }),
-    { name: 'churning-man-schedule' }
-  )
-)
+export const useScheduleStore = create<ScheduleStore>()(() => ({
+  events: [],
+  addEvent:    (event)          => { void addDoc(collection(db, 'events'), clean(event)) },
+  deleteEvent: (id)             => { void deleteDoc(doc(db, 'events', id)) },
+  updateEvent: (id, updates)    => { void updateDoc(doc(db, 'events', id), clean(updates)) },
+}))
+
+onSnapshot(collection(db, 'events'), (snap) => {
+  const events = snap.docs.map(d => ({ ...d.data(), id: d.id } as ScheduleEvent))
+  useScheduleStore.setState({ events })
+})

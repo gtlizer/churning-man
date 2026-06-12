@@ -34,7 +34,6 @@ export interface Expense {
   paidBy: string
   date: string
   notes?: string
-  receiptUrl?: string
 }
 
 export interface ScheduleEvent {

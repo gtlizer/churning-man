@@ -1,7 +1,5 @@
-import { useState, useRef } from 'react'
-import { Plus, Trash2, Pencil, Check, X, Search, ChevronUp, ChevronDown, DollarSign, Paperclip, Upload } from 'lucide-react'
-import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage'
-import { storage } from '../lib/firebase'
+import { useState } from 'react'
+import { Plus, Trash2, Pencil, Check, X, Search, ChevronUp, ChevronDown, DollarSign } from 'lucide-react'
 import { useExpenseStore } from '../store/expenseStore'
 import type { Expense, ExpenseCategory } from '../types'
 import { CAMP_MEMBERS } from '../constants/campMembers'
@@ -37,65 +35,6 @@ function formatDate(dateStr: string) {
   return new Date(dateStr + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
-// ── Receipt upload field ──────────────────────────────────────────────────────
-
-function ReceiptUpload({
-  file,
-  onChange,
-}: {
-  file: File | null
-  onChange: (f: File | null) => void
-}) {
-  const inputRef = useRef<HTMLInputElement>(null)
-  const preview = file && file.type.startsWith('image/') ? URL.createObjectURL(file) : null
-
-  return (
-    <div>
-      <label className="block text-xs font-semibold text-mauve/60 uppercase tracking-wider mb-1.5">
-        Receipt (optional)
-      </label>
-      <div
-        className="border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-colors"
-        style={{ borderColor: file ? 'rgba(255,45,120,0.4)' : 'rgba(0,0,0,0.12)' }}
-        onClick={() => inputRef.current?.click()}
-      >
-        {file ? (
-          <div className="flex items-center justify-center gap-3">
-            {preview ? (
-              <img src={preview} alt="receipt" className="h-20 rounded object-cover border border-black/10" />
-            ) : (
-              <div className="flex items-center gap-2 text-sm text-plum">
-                <Paperclip size={14} className="text-neon shrink-0" />
-                {file.name}
-              </div>
-            )}
-            <button
-              type="button"
-              onClick={e => { e.stopPropagation(); onChange(null) }}
-              className="p-1 text-mauve/40 hover:text-red-400 transition-colors shrink-0"
-            >
-              <X size={14} />
-            </button>
-          </div>
-        ) : (
-          <div className="text-mauve/40 text-sm">
-            <Upload size={18} className="mx-auto mb-1.5" />
-            Click to attach a receipt
-            <div className="text-[11px] mt-0.5">JPG, PNG, PDF</div>
-          </div>
-        )}
-        <input
-          ref={inputRef}
-          type="file"
-          accept="image/*,application/pdf"
-          className="hidden"
-          onChange={e => onChange(e.target.files?.[0] ?? null)}
-        />
-      </div>
-    </div>
-  )
-}
-
 // ── Add Expense Modal ─────────────────────────────────────────────────────────
 
 function AddExpenseModal({
@@ -106,28 +45,10 @@ function AddExpenseModal({
   onSubmit: (expense: Omit<Expense, 'id'>) => void
 }) {
   const [form, setForm] = useState(emptyForm)
-  const [receiptFile, setReceiptFile] = useState<File | null>(null)
-  const [uploading, setUploading] = useState(false)
-  const [uploadError, setUploadError] = useState('')
 
-  async function handleSubmit(e: React.FormEvent) {
+  function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!form.title || !form.amount || !form.paidBy) return
-
-    setUploading(true)
-    setUploadError('')
-
-    let receiptUrl: string | undefined
-    if (receiptFile) {
-      try {
-        const path = `receipts/${Date.now()}_${receiptFile.name}`
-        const snap = await uploadBytes(storageRef(storage, path), receiptFile)
-        receiptUrl = await getDownloadURL(snap.ref)
-      } catch {
-        setUploadError('Receipt upload failed — expense will be saved without it.')
-      }
-    }
-
     onSubmit({
       title: form.title,
       description: form.description || undefined,
@@ -135,10 +56,7 @@ function AddExpenseModal({
       category: form.category,
       paidBy: form.paidBy,
       date: form.date,
-      receiptUrl,
     })
-
-    setUploading(false)
     onClose()
   }
 
@@ -214,18 +132,12 @@ function AddExpenseModal({
             onChange={e => setForm({ ...form, description: e.target.value })}
           />
 
-          <ReceiptUpload file={receiptFile} onChange={setReceiptFile} />
-
-          {uploadError && (
-            <p className="text-xs text-amber-600">{uploadError}</p>
-          )}
-
           <div className="flex gap-3 justify-end pt-1">
             <button type="button" onClick={onClose} className="btn-secondary">
               Cancel
             </button>
-            <button type="submit" className="btn-primary" disabled={uploading}>
-              {uploading ? 'Saving…' : 'Add Expense'}
+            <button type="submit" className="btn-primary">
+              Add Expense
             </button>
           </div>
         </form>
@@ -488,21 +400,7 @@ export default function Expenses() {
                             autoFocus
                           />
                         ) : (
-                          <span className="text-plum font-semibold text-sm flex items-center gap-1">
-                            {expense.title}
-                            {expense.receiptUrl && (
-                              <a
-                                href={expense.receiptUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                onClick={e => e.stopPropagation()}
-                                className="text-neon/50 hover:text-neon transition-colors shrink-0"
-                                title="View receipt"
-                              >
-                                <Paperclip size={11} />
-                              </a>
-                            )}
-                          </span>
+                          <span className="text-plum font-semibold text-sm">{expense.title}</span>
                         )}
                       </td>
 

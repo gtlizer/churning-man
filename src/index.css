@@ -28,6 +28,7 @@
 
   body {
     @apply bg-playa text-plum font-body;
+    overflow-x: hidden;
   }
 }
 

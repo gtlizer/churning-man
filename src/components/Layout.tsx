@@ -66,7 +66,7 @@ export default function Layout() {
           <span className="font-display text-xl text-plum">Churning Man</span>
         </header>
 
-        <main className="flex-1 overflow-auto pb-28 md:pb-0">
+        <main className="flex-1 overflow-x-hidden overflow-y-auto pb-28 md:pb-0">
           <Outlet />
         </main>
 

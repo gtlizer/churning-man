@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Plus, Trash2, X, Minus } from 'lucide-react'
+import { Plus, Trash2, X, Minus, Pencil } from 'lucide-react'
 import { useInventoryStore } from '../store/inventoryStore'
 import type { IceCreamItem } from '../types'
 
@@ -49,11 +49,13 @@ function IceCreamCard({
   onInc,
   onDec,
   onDelete,
+  onEdit,
 }: {
   item: IceCreamItem
   onInc: () => void
   onDec: () => void
   onDelete: () => void
+  onEdit: () => void
 }) {
   const p = palette(item.name)
   const emoji = flavorEmoji(item.name)
@@ -68,12 +70,20 @@ function IceCreamCard({
         <span className="text-6xl select-none" style={{ filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.2))' }}>
           {emoji}
         </span>
-        <button
-          onClick={onDelete}
-          className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/20 hover:bg-black/40 flex items-center justify-center text-white/80 opacity-0 group-hover:opacity-100 transition-all"
-        >
-          <Trash2 size={12} />
-        </button>
+        <div className="absolute top-2 right-2 flex gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all">
+          <button
+            onClick={onEdit}
+            className="w-7 h-7 rounded-full bg-black/20 hover:bg-black/40 flex items-center justify-center text-white/80"
+          >
+            <Pencil size={11} />
+          </button>
+          <button
+            onClick={onDelete}
+            className="w-7 h-7 rounded-full bg-black/20 hover:bg-black/40 flex items-center justify-center text-white/80"
+          >
+            <Trash2 size={12} />
+          </button>
+        </div>
       </div>
 
       {/* Info area */}
@@ -109,22 +119,39 @@ function IceCreamCard({
 }
 
 export default function Inventory() {
-  const { items, addItem, deleteItem, updateQuantity } = useInventoryStore()
+  const { items, addItem, deleteItem, updateQuantity, updateItem } = useInventoryStore()
   const [showForm, setShowForm] = useState(false)
   const [form, setForm] = useState(emptyForm)
+  const [editingItem, setEditingItem] = useState<IceCreamItem | null>(null)
 
   const total = items.reduce((sum, i) => sum + i.quantity, 0)
+
+  function handleEdit(item: IceCreamItem) {
+    setEditingItem(item)
+    setForm({ name: item.name, quantity: String(item.quantity), notes: item.notes || '' })
+    setShowForm(true)
+  }
+
+  function handleCloseForm() {
+    setShowForm(false)
+    setEditingItem(null)
+    setForm(emptyForm)
+  }
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!form.name) return
-    addItem({
+    const data = {
       name: form.name,
       quantity: parseInt(form.quantity) || 1,
       notes: form.notes || undefined,
-    })
-    setForm(emptyForm)
-    setShowForm(false)
+    }
+    if (editingItem) {
+      updateItem(editingItem.id, data)
+    } else {
+      addItem(data)
+    }
+    handleCloseForm()
   }
 
   return (
@@ -135,7 +162,7 @@ export default function Inventory() {
           <p className="section-subtitle">What we're bringing to the playa</p>
         </div>
         <button
-          onClick={() => setShowForm(!showForm)}
+          onClick={() => { setEditingItem(null); setForm(emptyForm); setShowForm(true) }}
           className="btn-primary flex items-center gap-2"
         >
           <Plus size={16} />
@@ -160,8 +187,8 @@ export default function Inventory() {
       {showForm && (
         <div className="card p-5 mb-6 border-berry/30">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="font-display text-xl text-plum">New Flavor</h2>
-            <button onClick={() => setShowForm(false)} className="text-mauve hover:text-plum transition-colors">
+            <h2 className="font-display text-xl text-plum">{editingItem ? 'Edit Flavor' : 'New Flavor'}</h2>
+            <button onClick={handleCloseForm} className="text-mauve hover:text-plum transition-colors">
               <X size={18} />
             </button>
           </div>
@@ -189,11 +216,11 @@ export default function Inventory() {
               onChange={(e) => setForm({ ...form, notes: e.target.value })}
             />
             <div className="col-span-2 flex gap-3 justify-end">
-              <button type="button" onClick={() => setShowForm(false)} className="btn-secondary">
+              <button type="button" onClick={handleCloseForm} className="btn-secondary">
                 Cancel
               </button>
               <button type="submit" className="btn-primary">
-                Add Flavor
+                {editingItem ? 'Save Changes' : 'Add Flavor'}
               </button>
             </div>
           </form>
@@ -214,6 +241,7 @@ export default function Inventory() {
               onInc={() => updateQuantity(item.id, item.quantity + 1)}
               onDec={() => item.quantity > 1 && updateQuantity(item.id, item.quantity - 1)}
               onDelete={() => deleteItem(item.id)}
+              onEdit={() => handleEdit(item)}
             />
           ))}
         </div>

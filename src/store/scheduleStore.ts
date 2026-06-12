@@ -23,6 +23,13 @@ export const useScheduleStore = create<ScheduleStore>()(() => ({
 }))
 
 onSnapshot(collection(db, 'events'), (snap) => {
-  const events = snap.docs.map(d => ({ ...d.data(), id: d.id } as ScheduleEvent))
+  const events = snap.docs.map(d => {
+    const data = d.data()
+    // Normalize legacy single-string assignedTo to array
+    if (typeof data.assignedTo === 'string') {
+      data.assignedTo = data.assignedTo ? [data.assignedTo] : undefined
+    }
+    return { ...data, id: d.id } as ScheduleEvent
+  })
   useScheduleStore.setState({ events })
 })

@@ -183,12 +183,12 @@ function EventBlock({
             🎭 {event.theme}
           </div>
         )}
-        {!tiny && event.assignedTo && (
+        {!tiny && event.assignedTo && event.assignedTo.length > 0 && (
           <div
             className="text-[10px] leading-tight truncate"
             style={{ color: c.text, opacity: 0.55 }}
           >
-            → {event.assignedTo}
+            → {event.assignedTo.join(', ')}
           </div>
         )}
       </div>
@@ -214,7 +214,7 @@ const emptyForm = {
   theme: '',
   bits: '',
   category: 'Ice Cream Run' as EventCategory,
-  assignedTo: '',
+  assignedTo: [] as string[],
 }
 
 function AddEventModal({
@@ -235,7 +235,7 @@ function AddEventModal({
     date: initialDate || emptyForm.date,
     startTime: initialStartTime || emptyForm.startTime,
     endTime: initialStartTime ? addOneHour(initialStartTime) : emptyForm.endTime,
-    assignedTo: activeTab === 'General' ? '' : activeTab,
+    assignedTo: activeTab === 'General' ? [] as string[] : [activeTab],
   })
 
   function handleSubmit(e: React.FormEvent) {
@@ -251,7 +251,7 @@ function AddEventModal({
       theme: form.theme || undefined,
       bits: form.bits || undefined,
       category: form.category,
-      assignedTo: form.assignedTo || undefined,
+      assignedTo: form.assignedTo.length > 0 ? form.assignedTo : undefined,
     })
     onClose()
   }
@@ -312,16 +312,33 @@ function AddEventModal({
               onChange={e => setForm({ ...form, endTime: e.target.value })}
             />
           </div>
-          <select
-            className="select"
-            value={form.assignedTo}
-            onChange={e => setForm({ ...form, assignedTo: e.target.value })}
-          >
-            <option value="">🌐 General event (no assignment)</option>
-            {CAMP_MEMBERS.map(m => (
-              <option key={m} value={m}>👤 {m}</option>
-            ))}
-          </select>
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-mauve mb-2">👤 Assign To</p>
+            <div className="flex flex-wrap gap-1.5">
+              {CAMP_MEMBERS.map(m => {
+                const selected = form.assignedTo.includes(m)
+                return (
+                  <button
+                    key={m}
+                    type="button"
+                    onClick={() => setForm({
+                      ...form,
+                      assignedTo: selected
+                        ? form.assignedTo.filter(p => p !== m)
+                        : [...form.assignedTo, m],
+                    })}
+                    className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
+                      selected
+                        ? 'bg-neon/10 border-neon/30 text-neon font-semibold'
+                        : 'border-playa-mid text-mauve/60 hover:text-mauve hover:border-mauve/40'
+                    }`}
+                  >
+                    {m}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
           <input
             className="input"
             placeholder="📍 Location (optional)"
@@ -381,23 +398,36 @@ function EventDetailModal({
   onDelete: (id: string) => void
   onUpdate: (id: string, updates: Partial<ScheduleEvent>) => void
 }) {
-  const c = CAT_COLOR[event.category]
-  const [theme, setTheme] = useState(event.theme || '')
-  const [bits, setBits] = useState(event.bits || '')
-  const [description, setDescription] = useState(event.description || '')
+  const [form, setForm] = useState({
+    title: event.title,
+    category: event.category,
+    date: event.date,
+    startTime: event.startTime,
+    endTime: event.endTime || '',
+    location: event.location || '',
+    assignedTo: event.assignedTo || ([] as string[]),
+    theme: event.theme || '',
+    bits: event.bits || '',
+    description: event.description || '',
+  })
+
+  const c = CAT_COLOR[form.category]
 
   function handleSave() {
     onUpdate(event.id, {
-      theme: theme || undefined,
-      bits: bits || undefined,
-      description: description || undefined,
+      title: form.title,
+      category: form.category,
+      date: form.date,
+      startTime: form.startTime,
+      endTime: form.endTime || undefined,
+      location: form.location || undefined,
+      assignedTo: form.assignedTo.length > 0 ? form.assignedTo : undefined,
+      theme: form.theme || undefined,
+      bits: form.bits || undefined,
+      description: form.description || undefined,
     })
     onClose()
   }
-
-  const dateLabel = new Date(event.date + 'T12:00:00').toLocaleDateString('en-US', {
-    weekday: 'short', month: 'short', day: 'numeric',
-  })
 
   return (
     <div
@@ -405,20 +435,29 @@ function EventDetailModal({
       onClick={e => e.target === e.currentTarget && onClose()}
     >
       <div className="card w-full max-w-md mx-4 p-0 overflow-hidden max-h-[90vh] flex flex-col">
-        {/* Colored header */}
+        {/* Colored header with editable title + category */}
         <div
           className="px-5 py-4 shrink-0"
           style={{ borderLeft: `4px solid ${c.border}`, backgroundColor: c.bg }}
         >
           <div className="flex items-start justify-between gap-2">
-            <div className="min-w-0">
-              <div
-                className="text-[10px] font-bold uppercase tracking-widest mb-1"
+            <div className="flex-1 min-w-0">
+              <select
+                value={form.category}
+                onChange={e => setForm({ ...form, category: e.target.value as EventCategory })}
+                className="text-[10px] font-bold uppercase tracking-widest bg-transparent border-0 cursor-pointer mb-1 focus:outline-none"
                 style={{ color: c.text }}
               >
-                {CAT_EMOJI[event.category]} {event.category}
-              </div>
-              <h2 className="font-display text-2xl text-plum leading-tight">{event.title}</h2>
+                {CATEGORIES.map(cat => (
+                  <option key={cat} value={cat}>{CAT_EMOJI[cat]} {cat}</option>
+                ))}
+              </select>
+              <input
+                className="font-display text-2xl text-plum leading-tight bg-transparent w-full border-0 border-b border-transparent focus:outline-none focus:border-plum/20 transition-colors"
+                value={form.title}
+                onChange={e => setForm({ ...form, title: e.target.value })}
+                placeholder="Event title"
+              />
             </div>
             <div className="flex gap-1 shrink-0 mt-0.5">
               <button
@@ -428,64 +467,105 @@ function EventDetailModal({
               >
                 <Trash2 size={14} />
               </button>
-              <button
-                onClick={onClose}
-                className="p-1.5 rounded text-mauve hover:text-plum transition-colors"
-              >
+              <button onClick={onClose} className="p-1.5 rounded text-mauve hover:text-plum transition-colors">
                 <X size={14} />
               </button>
             </div>
           </div>
-          <div
-            className="flex flex-wrap gap-x-3 gap-y-1 mt-2 text-[11px]"
-            style={{ color: c.text, opacity: 0.8 }}
-          >
-            <span>🕐 {fmtTime(event.startTime)}{event.endTime ? ` – ${fmtTime(event.endTime)}` : ''}</span>
-            <span>📅 {dateLabel}</span>
-            {event.location && <span>📍 {event.location}</span>}
-            {event.assignedTo && <span>👤 {event.assignedTo}</span>}
-          </div>
         </div>
 
-        {/* Editable body */}
-        <div className="p-5 space-y-4 overflow-y-auto">
-          <div>
-            <label className="block text-[10px] font-bold uppercase tracking-widest text-mauve mb-1.5">
-              🎭 Shift Theme
-            </label>
+        {/* Editable body — all fields */}
+        <div className="p-5 space-y-3 overflow-y-auto">
+          {/* Date + times */}
+          <div className="grid grid-cols-3 gap-2">
+            <select
+              className="select text-xs"
+              value={form.date}
+              onChange={e => setForm({ ...form, date: e.target.value })}
+            >
+              {BURN_DAYS.map(d => (
+                <option key={isoDate(d)} value={isoDate(d)}>
+                  {d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                </option>
+              ))}
+            </select>
             <input
-              className="input w-full"
-              placeholder="e.g. Disco Cones, Space Cowboys, Pirate Sundaes…"
-              value={theme}
-              onChange={e => setTheme(e.target.value)}
+              className="input"
+              type="time"
+              value={form.startTime}
+              onChange={e => setForm({ ...form, startTime: e.target.value })}
+            />
+            <input
+              className="input"
+              type="time"
+              value={form.endTime}
+              onChange={e => setForm({ ...form, endTime: e.target.value })}
             />
           </div>
+
+          <input
+            className="input w-full"
+            placeholder="📍 Location (optional)"
+            value={form.location}
+            onChange={e => setForm({ ...form, location: e.target.value })}
+          />
+
+          {/* Assign To chips */}
           <div>
-            <label className="block text-[10px] font-bold uppercase tracking-widest text-mauve mb-1.5">
-              🎪 Bits
-            </label>
-            <textarea
-              className="input w-full resize-none"
-              placeholder="List the bits/routines for this shift (one per line)…"
-              rows={4}
-              value={bits}
-              onChange={e => setBits(e.target.value)}
-            />
+            <p className="text-[10px] font-bold uppercase tracking-widest text-mauve mb-2">👤 Assign To</p>
+            <div className="flex flex-wrap gap-1.5">
+              {CAMP_MEMBERS.map(m => {
+                const selected = form.assignedTo.includes(m)
+                return (
+                  <button
+                    key={m}
+                    type="button"
+                    onClick={() => setForm({
+                      ...form,
+                      assignedTo: selected
+                        ? form.assignedTo.filter(p => p !== m)
+                        : [...form.assignedTo, m],
+                    })}
+                    className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
+                      selected
+                        ? 'bg-neon/10 border-neon/30 text-neon font-semibold'
+                        : 'border-playa-mid text-mauve/60 hover:text-mauve hover:border-mauve/40'
+                    }`}
+                  >
+                    {m}
+                  </button>
+                )
+              })}
+            </div>
           </div>
-          <div>
-            <label className="block text-[10px] font-bold uppercase tracking-widest text-mauve mb-1.5">
-              📝 Notes
-            </label>
-            <textarea
-              className="input w-full resize-none"
-              placeholder="Any other notes…"
-              rows={3}
-              value={description}
-              onChange={e => setDescription(e.target.value)}
-            />
+
+          <div className="border-t border-black/10 pt-1">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-mauve mb-2">Shift Details</p>
           </div>
+
+          <input
+            className="input w-full"
+            placeholder="🎭 Theme (e.g. Disco Cones, Space Cowboys…)"
+            value={form.theme}
+            onChange={e => setForm({ ...form, theme: e.target.value })}
+          />
+          <textarea
+            className="input w-full resize-none"
+            placeholder="🎪 Bits / performance notes (one per line)"
+            rows={3}
+            value={form.bits}
+            onChange={e => setForm({ ...form, bits: e.target.value })}
+          />
+          <textarea
+            className="input w-full resize-none"
+            placeholder="📝 General notes (optional)"
+            rows={2}
+            value={form.description}
+            onChange={e => setForm({ ...form, description: e.target.value })}
+          />
+
           <div className="flex gap-3 justify-end pt-1">
-            <button onClick={onClose} className="btn-secondary">Discard</button>
+            <button onClick={onClose} className="btn-secondary">Cancel</button>
             <button onClick={handleSave} className="btn-primary">Save Changes</button>
           </div>
         </div>
@@ -764,8 +844,8 @@ function AgendaView({
                           <div className="text-xs mt-0.5" style={{ color: c.text }}>
                             {fmtTime(ev.startTime)}
                             {ev.endTime ? ` – ${fmtTime(ev.endTime)}` : ''}
-                            {ev.assignedTo && (
-                              <span className="text-mauve/60"> · {ev.assignedTo}</span>
+                            {ev.assignedTo && ev.assignedTo.length > 0 && (
+                              <span className="text-mauve/60"> · {ev.assignedTo.join(', ')}</span>
                             )}
                           </div>
                           {ev.theme && (
@@ -804,7 +884,7 @@ export default function Schedule() {
   const visibleEvents =
     activeTab === 'General'
       ? events
-      : events.filter(e => e.assignedTo === activeTab)
+      : events.filter(e => e.assignedTo?.includes(activeTab) ?? false)
 
   function handleSlotDoubleClick(date: string, startTime: string) {
     setNewEventSlot({ date, startTime })

@@ -12,13 +12,15 @@ interface InventoryStore {
   addItem: (item: Omit<IceCreamItem, 'id'>) => void
   deleteItem: (id: string) => void
   updateQuantity: (id: string, quantity: number) => void
+  updateItem: (id: string, updates: Partial<Omit<IceCreamItem, 'id'>>) => void
 }
 
 export const useInventoryStore = create<InventoryStore>()(() => ({
   items: [],
-  addItem:    (item)              => { void addDoc(collection(db, 'inventory'), clean(item)) },
-  deleteItem: (id)                => { void deleteDoc(doc(db, 'inventory', id)) },
-  updateQuantity: (id, quantity)  => { void updateDoc(doc(db, 'inventory', id), { quantity }) },
+  addItem:        (item)           => { void addDoc(collection(db, 'inventory'), clean(item)) },
+  deleteItem:     (id)             => { void deleteDoc(doc(db, 'inventory', id)) },
+  updateQuantity: (id, quantity)   => { void updateDoc(doc(db, 'inventory', id), { quantity }) },
+  updateItem:     (id, updates)    => { void updateDoc(doc(db, 'inventory', id), clean(updates)) },
 }))
 
 onSnapshot(collection(db, 'inventory'), (snap) => {

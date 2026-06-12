@@ -45,7 +45,7 @@ export interface ScheduleEvent {
   location?: string
   description?: string
   category: EventCategory
-  assignedTo?: string
+  assignedTo?: string[]
   theme?: string
   bits?: string
 }

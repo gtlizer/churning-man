@@ -18,8 +18,8 @@ const BURN_DAYS: Date[] = (() => {
 })()
 
 const HOUR_HEIGHT = 64
-const START_HOUR = 6
-const END_HOUR = 26
+const START_HOUR = 0
+const END_HOUR = 24
 const TOTAL_HOURS = END_HOUR - START_HOUR
 
 const CATEGORIES: EventCategory[] = [
@@ -65,11 +65,10 @@ function isoDate(d: Date): string {
 }
 
 function hourLabel(h: number): string {
+  if (h === 0 || h === 24) return '12a'
   if (h < 12) return `${h}a`
   if (h === 12) return '12p'
-  if (h < 24) return `${h - 12}p`
-  if (h === 24) return '12a'
-  return `${h - 24}a`
+  return `${h - 12}p`
 }
 
 function addOneHour(time: string): string {

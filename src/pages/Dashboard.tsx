@@ -56,7 +56,7 @@ export default function Dashboard() {
           <div className="font-display text-7xl md:text-8xl text-neon leading-none">
             {daysUntilBurn}
           </div>
-          <div className="text-xs text-mauve uppercase tracking-widest mt-2">Days to Burn</div>
+          <div className="text-xs text-mauve uppercase tracking-widest mt-2">Days to Churn</div>
         </div>
       </div>
 

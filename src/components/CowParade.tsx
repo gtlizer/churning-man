@@ -37,7 +37,7 @@ export default function CowParade({ onDone }: Props) {
             left: 0,
             fontSize: cow.size,
             lineHeight: 1,
-            animation: `cow-walk ${cow.duration}s linear ${cow.delay}s forwards, cow-bob 0.35s ease-in-out ${cow.delay}s infinite`,
+            animation: `cow-walk ${cow.duration}s linear ${cow.delay}s both, cow-bob 0.35s ease-in-out ${cow.delay}s infinite`,
             display: 'inline-block',
           }}
         >

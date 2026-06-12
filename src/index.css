@@ -3,8 +3,8 @@
 @tailwind utilities;
 
 @keyframes cow-walk {
-  from { transform: translateX(-120px); }
-  to   { transform: translateX(calc(100vw + 150px)); }
+  from { transform: translateX(-200px) scaleX(-1); }
+  to   { transform: translateX(calc(100vw + 200px)) scaleX(-1); }
 }
 @keyframes cow-bob {
   0%, 100% { margin-bottom: 0px; }

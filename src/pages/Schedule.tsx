@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { Plus, X, Trash2 } from 'lucide-react'
+import { Plus, X, Trash2, List, LayoutGrid } from 'lucide-react'
 import { useScheduleStore } from '../store/scheduleStore'
 import type { ScheduleEvent, EventCategory } from '../types'
 import { CAMP_MEMBERS } from '../constants/campMembers'
@@ -678,6 +678,119 @@ function CalendarGrid({
   )
 }
 
+// ── AgendaView ────────────────────────────────────────────────────────────────
+
+function AgendaView({
+  events,
+  days,
+  onEventClick,
+  onDelete,
+  onAddForDay,
+}: {
+  events: ScheduleEvent[]
+  days: Date[]
+  onEventClick: (event: ScheduleEvent) => void
+  onDelete: (id: string) => void
+  onAddForDay: (date: string) => void
+}) {
+  const today = isoDate(new Date())
+
+  return (
+    <div className="overflow-y-auto" style={{ height: 'calc(100dvh - 220px)' }}>
+      <div className="space-y-5 pb-4">
+        {days.map(d => {
+          const key = isoDate(d)
+          const isToday = key === today
+          const weekend = d.getDay() === 0 || d.getDay() === 6
+          const dayEvents = events
+            .filter(e => e.date === key)
+            .sort((a, b) => toMin(a.startTime) - toMin(b.startTime))
+
+          return (
+            <div key={key}>
+              {/* Day header */}
+              <div className="flex items-center gap-3 mb-2">
+                <div
+                  className="w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm shrink-0"
+                  style={{
+                    background: isToday ? '#FF2D78' : weekend ? 'rgba(255,45,120,0.1)' : 'rgba(0,0,0,0.05)',
+                    color: isToday ? '#fff' : weekend ? '#C0105C' : 'rgba(26,8,32,0.75)',
+                  }}
+                >
+                  {d.getDate()}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div
+                    className="text-xs font-bold uppercase tracking-widest"
+                    style={{ color: weekend ? '#FF2D78' : 'rgba(155,112,144,0.7)' }}
+                  >
+                    {d.toLocaleDateString('en-US', { weekday: 'long' })}
+                  </div>
+                  <div className="text-[11px] text-mauve/50">
+                    {d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                  </div>
+                </div>
+                <button
+                  onClick={() => onAddForDay(key)}
+                  className="p-2 rounded-xl text-mauve/50 hover:text-neon hover:bg-neon/10 transition-colors shrink-0"
+                >
+                  <Plus size={16} />
+                </button>
+              </div>
+
+              {/* Event cards */}
+              {dayEvents.length === 0 ? (
+                <div className="text-xs italic px-3 py-2" style={{ color: 'rgba(155,112,144,0.3)' }}>
+                  No events
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {dayEvents.map(ev => {
+                    const c = CAT_COLOR[ev.category]
+                    return (
+                      <div
+                        key={ev.id}
+                        className="card p-3 flex items-start gap-3 cursor-pointer active:opacity-70 transition-opacity"
+                        style={{ borderLeft: `3px solid ${c.border}` }}
+                        onClick={() => onEventClick(ev)}
+                      >
+                        <div className="text-lg leading-none mt-0.5 shrink-0">
+                          {CAT_EMOJI[ev.category]}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="font-semibold text-sm text-plum leading-snug">
+                            {ev.title}
+                          </div>
+                          <div className="text-xs mt-0.5" style={{ color: c.text }}>
+                            {fmtTime(ev.startTime)}
+                            {ev.endTime ? ` – ${fmtTime(ev.endTime)}` : ''}
+                            {ev.assignedTo && (
+                              <span className="text-mauve/60"> · {ev.assignedTo}</span>
+                            )}
+                          </div>
+                          {ev.theme && (
+                            <div className="text-xs text-mauve/50 italic mt-0.5">🎭 {ev.theme}</div>
+                          )}
+                        </div>
+                        <button
+                          onClick={e => { e.stopPropagation(); onDelete(ev.id) }}
+                          className="p-1.5 text-mauve/25 hover:text-red-400 transition-colors shrink-0"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 // ── Schedule page ─────────────────────────────────────────────────────────────
 
 export default function Schedule() {
@@ -686,11 +799,7 @@ export default function Schedule() {
   const [showForm, setShowForm] = useState(false)
   const [newEventSlot, setNewEventSlot] = useState<{ date: string; startTime: string } | null>(null)
   const [selectedEvent, setSelectedEvent] = useState<ScheduleEvent | null>(null)
-  const [mobileDayIdx, setMobileDayIdx] = useState(() => {
-    const todayStr = isoDate(new Date())
-    const idx = BURN_DAYS.findIndex(d => isoDate(d) === todayStr)
-    return idx >= 0 ? idx : 0
-  })
+  const [mobileView, setMobileView] = useState<'agenda' | 'grid'>('agenda')
 
   const visibleEvents =
     activeTab === 'General'
@@ -707,6 +816,11 @@ export default function Schedule() {
     setNewEventSlot(null)
   }
 
+  function handleAddForDay(date: string) {
+    setNewEventSlot({ date, startTime: '12:00' })
+    setShowForm(true)
+  }
+
   return (
     <div className="flex flex-col p-4 gap-3">
       {/* Page header */}
@@ -717,13 +831,41 @@ export default function Schedule() {
             Burning Man 2026 · Aug 29 – Sep 6
           </p>
         </div>
-        <button
-          onClick={() => { setNewEventSlot(null); setShowForm(true) }}
-          className="btn-primary flex items-center gap-2"
-        >
-          <Plus size={15} />
-          Add Event
-        </button>
+        <div className="flex items-center gap-2">
+          {/* Mobile view toggle */}
+          <div className="md:hidden flex items-center rounded-xl p-0.5 gap-0.5" style={{ background: 'rgba(0,0,0,0.06)' }}>
+            <button
+              onClick={() => setMobileView('agenda')}
+              className="p-2 rounded-lg transition-all"
+              style={{
+                background: mobileView === 'agenda' ? 'rgb(var(--c-playa-light))' : 'transparent',
+                color: mobileView === 'agenda' ? 'rgb(var(--c-plum))' : 'rgba(155,112,144,0.5)',
+                boxShadow: mobileView === 'agenda' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+              }}
+            >
+              <List size={15} />
+            </button>
+            <button
+              onClick={() => setMobileView('grid')}
+              className="p-2 rounded-lg transition-all"
+              style={{
+                background: mobileView === 'grid' ? 'rgb(var(--c-playa-light))' : 'transparent',
+                color: mobileView === 'grid' ? 'rgb(var(--c-plum))' : 'rgba(155,112,144,0.5)',
+                boxShadow: mobileView === 'grid' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+              }}
+            >
+              <LayoutGrid size={15} />
+            </button>
+          </div>
+          <button
+            onClick={() => { setNewEventSlot(null); setShowForm(true) }}
+            className="btn-primary flex items-center gap-2"
+          >
+            <Plus size={15} />
+            <span className="hidden sm:inline">Add Event</span>
+            <span className="sm:hidden">Add</span>
+          </button>
+        </div>
       </div>
 
       {/* Tab bar */}
@@ -746,40 +888,25 @@ export default function Schedule() {
         ))}
       </div>
 
-      {/* Mobile day picker */}
-      <div className="md:hidden flex gap-2 overflow-x-auto pb-1 shrink-0" style={{ scrollbarWidth: 'none' }}>
-        {BURN_DAYS.map((d, i) => {
-          const isToday = isoDate(d) === isoDate(new Date())
-          const isSelected = i === mobileDayIdx
-          return (
-            <button
-              key={isoDate(d)}
-              onClick={() => setMobileDayIdx(i)}
-              className="shrink-0 flex flex-col items-center px-3 py-1.5 rounded-xl transition-all"
-              style={{
-                background: isSelected ? '#FF2D78' : isToday ? 'rgba(255,45,120,0.1)' : 'rgba(0,0,0,0.04)',
-                color: isSelected ? '#fff' : isToday ? '#FF2D78' : 'rgba(155,112,144,0.85)',
-              }}
-            >
-              <span className="text-[10px] font-bold uppercase tracking-widest">
-                {d.toLocaleDateString('en-US', { weekday: 'short' })}
-              </span>
-              <span className="text-lg font-bold leading-tight">{d.getDate()}</span>
-            </button>
-          )
-        })}
-      </div>
-
-      {/* Mobile calendar (single day) */}
+      {/* Mobile views */}
       <div className="md:hidden">
-        <CalendarGrid
-          events={visibleEvents}
-          onDelete={deleteEvent}
-          onEventClick={setSelectedEvent}
-          onSlotDoubleClick={handleSlotDoubleClick}
-          days={[BURN_DAYS[mobileDayIdx]]}
-          scrollHeight="calc(100dvh - 320px)"
-        />
+        {mobileView === 'agenda' ? (
+          <AgendaView
+            events={visibleEvents}
+            days={BURN_DAYS}
+            onEventClick={setSelectedEvent}
+            onDelete={deleteEvent}
+            onAddForDay={handleAddForDay}
+          />
+        ) : (
+          <CalendarGrid
+            events={visibleEvents}
+            onDelete={deleteEvent}
+            onEventClick={setSelectedEvent}
+            onSlotDoubleClick={handleSlotDoubleClick}
+            scrollHeight="calc(100dvh - 230px)"
+          />
+        )}
       </div>
 
       {/* Desktop calendar (full week) */}

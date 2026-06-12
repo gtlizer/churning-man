@@ -49,6 +49,101 @@ const emptyAddForm = {
 
 type SortCol = 'name' | 'category' | 'quantity' | 'assignedTo' | null
 
+// ── Gear Item Modal (mobile add / edit) ───────────────────────────────────────
+
+function GearItemModal({
+  onClose,
+  onSave,
+  initial,
+}: {
+  onClose: () => void
+  onSave: (item: Omit<GearItem, 'id' | 'packed'>) => void
+  initial?: GearItem
+}) {
+  const [form, setForm] = useState({
+    name: initial?.name ?? '',
+    category: initial?.category ?? ('Camp Essentials' as GearCategory),
+    quantity: String(initial?.quantity ?? '1'),
+    assignedTo: initial?.assignedTo ?? '',
+    notes: initial?.notes ?? '',
+  })
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/60 backdrop-blur-sm"
+      onClick={e => e.target === e.currentTarget && onClose()}
+    >
+      <div className="card w-full max-w-md mx-0 md:mx-4 p-6 rounded-b-none md:rounded-2xl max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between mb-5">
+          <h2 className="font-display text-2xl text-plum">{initial ? 'Edit Item' : 'New Gear Item'}</h2>
+          <button onClick={onClose} className="text-mauve hover:text-plum transition-colors">
+            <X size={20} />
+          </button>
+        </div>
+        <div className="space-y-3">
+          <input
+            className="input w-full"
+            placeholder="Item name *"
+            value={form.name}
+            onChange={e => setForm({ ...form, name: e.target.value })}
+            autoFocus
+          />
+          <select
+            className="select"
+            value={form.category}
+            onChange={e => setForm({ ...form, category: e.target.value as GearCategory })}
+          >
+            {CATEGORIES.map(c => <option key={c} value={c}>{CATEGORY_EMOJIS[c]} {c}</option>)}
+          </select>
+          <div className="grid grid-cols-2 gap-3">
+            <input
+              type="number"
+              min="1"
+              className="input"
+              placeholder="Qty"
+              value={form.quantity}
+              onChange={e => setForm({ ...form, quantity: e.target.value })}
+            />
+            <select
+              className="select"
+              value={form.assignedTo}
+              onChange={e => setForm({ ...form, assignedTo: e.target.value })}
+            >
+              <option value="">Unassigned</option>
+              {CAMP_MEMBERS.map(m => <option key={m} value={m}>{m}</option>)}
+            </select>
+          </div>
+          <input
+            className="input w-full"
+            placeholder="Notes (optional)"
+            value={form.notes}
+            onChange={e => setForm({ ...form, notes: e.target.value })}
+          />
+          <div className="flex gap-3 justify-end pt-1">
+            <button onClick={onClose} className="btn-secondary">Cancel</button>
+            <button
+              onClick={() => {
+                if (!form.name) return
+                onSave({
+                  name: form.name,
+                  category: form.category,
+                  quantity: parseInt(form.quantity) || 1,
+                  assignedTo: form.assignedTo || undefined,
+                  notes: form.notes || undefined,
+                })
+                onClose()
+              }}
+              className="btn-primary"
+            >
+              {initial ? 'Save Changes' : 'Add Item'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function GearList() {
@@ -62,6 +157,8 @@ export default function GearList() {
   const [addForm, setAddForm] = useState(emptyAddForm)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editForm, setEditForm] = useState<Partial<GearItem>>({})
+  const [showMobileAdd, setShowMobileAdd] = useState(false)
+  const [mobileEditItem, setMobileEditItem] = useState<GearItem | null>(null)
 
   // ── Stats ──────────────────────────────────────────────────────────────────
 
@@ -176,16 +273,25 @@ export default function GearList() {
   // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
-    <div className="p-6 w-full">
+    <div className="p-4 md:p-6 w-full">
       {/* Header */}
-      <div className="flex items-start justify-between mb-6 max-w-7xl mx-auto">
+      <div className="flex items-start justify-between mb-4 md:mb-6 max-w-7xl mx-auto">
         <div>
           <h1 className="section-title">Gear List</h1>
           <p className="section-subtitle">Who's bringing what</p>
         </div>
+        {/* Mobile: opens modal */}
+        <button
+          onClick={() => { setShowMobileAdd(true); setEditingId(null) }}
+          className="md:hidden btn-primary flex items-center gap-2"
+        >
+          <Plus size={16} />
+          Add Item
+        </button>
+        {/* Desktop: shows inline row */}
         <button
           onClick={() => { setShowAddRow(true); setEditingId(null) }}
-          className="btn-primary flex items-center gap-2"
+          className="hidden md:flex btn-primary items-center gap-2"
         >
           <Plus size={16} />
           Add Item
@@ -282,8 +388,67 @@ export default function GearList() {
         </span>
       </div>
 
-      {/* Table */}
-      <div className="card overflow-hidden max-w-7xl mx-auto">
+      {/* Mobile card list */}
+      <div className="md:hidden space-y-2 max-w-7xl mx-auto mb-4">
+        {filtered.length === 0 ? (
+          <div className="card p-10 text-center">
+            <div className="text-4xl mb-3">🎒</div>
+            <p className="text-mauve text-sm">
+              {items.length === 0 ? 'No gear added yet. Start building the list!' : 'No results match your search.'}
+            </p>
+          </div>
+        ) : (
+          filtered.map(item => (
+            <div
+              key={item.id}
+              className={`card p-4 flex items-start gap-3 transition-opacity ${item.packed ? 'opacity-60' : ''}`}
+            >
+              <button
+                onClick={() => togglePacked(item.id)}
+                className={`w-6 h-6 rounded-md border-2 flex items-center justify-center shrink-0 mt-0.5 transition-all ${
+                  item.packed ? 'bg-neon border-neon' : 'border-playa-mid'
+                }`}
+              >
+                {item.packed && (
+                  <svg className="w-3.5 h-3.5 text-white" viewBox="0 0 12 12" fill="none">
+                    <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                )}
+              </button>
+              <div className="flex-1 min-w-0">
+                <div className={`font-semibold text-sm ${item.packed ? 'line-through text-mauve/40' : 'text-plum'}`}>
+                  {item.name}
+                  {item.quantity > 1 && <span className="text-mauve/60 font-normal ml-1.5">×{item.quantity}</span>}
+                </div>
+                <div className="flex flex-wrap items-center gap-2 mt-1">
+                  <span className={`badge text-[10px] ${CATEGORY_STYLES[item.category]}`}>
+                    {CATEGORY_EMOJIS[item.category]} {item.category}
+                  </span>
+                  {item.assignedTo && <span className="text-[11px] text-mauve/60">👤 {item.assignedTo}</span>}
+                </div>
+                {item.notes && <div className="text-xs text-plum/60 mt-1">{item.notes}</div>}
+                <div className="flex gap-2 mt-2 justify-end">
+                  <button
+                    onClick={() => setMobileEditItem(item)}
+                    className="text-xs px-3 py-1 rounded-lg border border-playa-mid text-mauve hover:text-plum transition-colors"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    onClick={() => deleteItem(item.id)}
+                    className="text-xs px-3 py-1 rounded-lg border border-red-200 text-red-400 hover:text-red-600 transition-colors"
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* Table (desktop only) */}
+      <div className="hidden md:block card overflow-hidden max-w-7xl mx-auto">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="border-b border-playa-mid/60 bg-playa-light/30">
@@ -558,6 +723,21 @@ export default function GearList() {
           </table>
         </div>
       </div>
+
+      {showMobileAdd && (
+        <GearItemModal
+          onClose={() => setShowMobileAdd(false)}
+          onSave={data => addItem({ ...data, packed: false })}
+        />
+      )}
+
+      {mobileEditItem && (
+        <GearItemModal
+          initial={mobileEditItem}
+          onClose={() => setMobileEditItem(null)}
+          onSave={data => updateItem(mobileEditItem.id, data)}
+        />
+      )}
     </div>
   )
 }

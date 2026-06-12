@@ -22,11 +22,11 @@ export default function Dashboard() {
   const daysUntilBurn = getDaysUntilBurn()
 
   return (
-    <div className="p-6 flex flex-col gap-5">
+    <div className="p-4 md:p-6 flex flex-col gap-5">
 
       {/* ── Hero band ──────────────────────────────────────────────── */}
       <div
-        className="card p-8 flex items-center justify-between gap-8 overflow-hidden relative"
+        className="card p-5 md:p-8 flex flex-col md:flex-row md:items-center md:justify-between gap-4 md:gap-8 overflow-hidden relative"
       >
         {/* Decorative glow */}
         <div
@@ -34,29 +34,29 @@ export default function Dashboard() {
           style={{ background: 'radial-gradient(circle, rgba(255,45,120,0.12) 0%, transparent 70%)' }}
         />
 
-        <div className="flex items-center gap-8 relative z-10">
-          <span className="text-8xl md:text-9xl animate-float leading-none">🍦</span>
+        <div className="flex items-center gap-4 md:gap-8 relative z-10">
+          <span className="text-7xl md:text-9xl animate-float leading-none">🍦</span>
           <div>
-            <h1 className="font-display text-5xl md:text-7xl text-plum tracking-wider leading-none">
+            <h1 className="font-display text-4xl md:text-7xl text-plum tracking-wider leading-none">
               CHURNING MAN
             </h1>
-            <p className="text-mauve text-lg md:text-xl mt-2">
+            <p className="text-mauve text-base md:text-xl mt-2">
               Ice Cream Division · Burning Man 2026
             </p>
-            <p className="text-mauve/40 text-sm mt-1">
+            <p className="text-mauve/40 text-xs md:text-sm mt-1">
               Black Rock City, NV · Aug 29 – Sep 6
             </p>
           </div>
         </div>
 
         <div
-          className="relative z-10 shrink-0 text-center px-10 py-6 rounded-2xl"
+          className="relative z-10 flex md:block items-center gap-4 text-center px-5 py-4 md:px-10 md:py-6 rounded-2xl"
           style={{ background: 'rgba(255,45,120,0.1)', border: '1px solid rgba(255,45,120,0.3)' }}
         >
-          <div className="font-display text-7xl md:text-8xl text-neon leading-none">
+          <div className="font-display text-5xl md:text-8xl text-neon leading-none">
             {daysUntilBurn}
           </div>
-          <div className="text-xs text-mauve uppercase tracking-widest mt-2">Days to Churn</div>
+          <div className="text-xs text-mauve uppercase tracking-widest md:mt-2">Days to Churn</div>
         </div>
       </div>
 

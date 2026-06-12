@@ -66,7 +66,7 @@ export default function Layout() {
           <span className="font-display text-xl text-plum">Churning Man</span>
         </header>
 
-        <main className="flex-1 overflow-auto pb-24 md:pb-0">
+        <main className="flex-1 overflow-auto pb-28 md:pb-0">
           <Outlet />
         </main>
 
@@ -74,7 +74,7 @@ export default function Layout() {
         </div>
 
         {/* Mobile bottom nav */}
-        <nav className="md:hidden fixed bottom-0 inset-x-0 bg-playa-light/95 backdrop-blur-md border-t border-playa-mid flex z-10">
+        <nav className="md:hidden fixed bottom-0 inset-x-0 bg-playa-light/95 backdrop-blur-md border-t border-playa-mid flex z-10" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
           {navItems.map(({ to, icon: Icon, label, end }) => (
             <NavLink
               key={to}

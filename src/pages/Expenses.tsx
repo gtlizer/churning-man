@@ -35,16 +35,25 @@ function formatDate(dateStr: string) {
   return new Date(dateStr + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
-// ── Add Expense Modal ─────────────────────────────────────────────────────────
+// ── Add / Edit Expense Modal ──────────────────────────────────────────────────
 
 function AddExpenseModal({
   onClose,
   onSubmit,
+  initial,
 }: {
   onClose: () => void
   onSubmit: (expense: Omit<Expense, 'id'>) => void
+  initial?: Expense
 }) {
-  const [form, setForm] = useState(emptyForm)
+  const [form, setForm] = useState(initial ? {
+    title: initial.title,
+    description: initial.description ?? '',
+    amount: String(initial.amount),
+    category: initial.category,
+    paidBy: initial.paidBy,
+    date: initial.date,
+  } : emptyForm)
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -67,7 +76,7 @@ function AddExpenseModal({
     >
       <div className="card w-full max-w-md mx-4 p-6 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-5">
-          <h2 className="font-display text-2xl text-plum">New Expense</h2>
+          <h2 className="font-display text-2xl text-plum">{initial ? 'Edit Expense' : 'New Expense'}</h2>
           <button onClick={onClose} className="text-mauve hover:text-plum transition-colors">
             <X size={20} />
           </button>
@@ -137,7 +146,7 @@ function AddExpenseModal({
               Cancel
             </button>
             <button type="submit" className="btn-primary">
-              Add Expense
+              {initial ? 'Save Changes' : 'Add Expense'}
             </button>
           </div>
         </form>
@@ -158,6 +167,7 @@ export default function Expenses() {
   const [showModal, setShowModal] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editForm, setEditForm] = useState<Partial<Expense>>({})
+  const [mobileEditExpense, setMobileEditExpense] = useState<Expense | null>(null)
 
   const total = expenses.reduce((sum, e) => sum + e.amount, 0)
 
@@ -244,9 +254,9 @@ export default function Expenses() {
   }
 
   return (
-    <div className="p-6 w-full">
+    <div className="p-4 md:p-6 w-full">
       {/* Header */}
-      <div className="flex items-start justify-between mb-6 max-w-7xl mx-auto">
+      <div className="flex items-start justify-between mb-4 md:mb-6 max-w-7xl mx-auto">
         <div>
           <h1 className="section-title">Expenses</h1>
           <p className="section-subtitle">Track what the camp is spending</p>
@@ -339,8 +349,53 @@ export default function Expenses() {
         </span>
       </div>
 
-      {/* Table */}
-      <div className="card overflow-hidden max-w-7xl mx-auto">
+      {/* Mobile card list */}
+      <div className="md:hidden space-y-2 max-w-7xl mx-auto mb-4">
+        {filtered.length === 0 ? (
+          <div className="card p-10 text-center">
+            <div className="text-4xl mb-3">💸</div>
+            <p className="text-mauve text-sm">
+              {expenses.length === 0 ? 'No expenses yet. Add your first one!' : 'No results match your search.'}
+            </p>
+          </div>
+        ) : (
+          filtered.map(expense => (
+            <div key={expense.id} className="card p-4 flex flex-col gap-2">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <div className="font-semibold text-plum text-sm leading-snug truncate">{expense.title}</div>
+                  {expense.description && (
+                    <div className="text-plum/60 text-xs mt-0.5 leading-relaxed">{expense.description}</div>
+                  )}
+                </div>
+                <div className="font-display text-xl text-plum shrink-0">${expense.amount.toFixed(2)}</div>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className={`badge text-[10px] ${CATEGORY_STYLES[expense.category]}`}>{expense.category}</span>
+                <span className="text-[11px] text-mauve/60">{formatDate(expense.date)}</span>
+                <span className="text-[11px] text-mauve/60">· {expense.paidBy}</span>
+              </div>
+              <div className="flex gap-2 justify-end">
+                <button
+                  onClick={() => setMobileEditExpense(expense)}
+                  className="text-xs px-3 py-1.5 rounded-lg border border-playa-mid text-mauve hover:text-plum transition-colors"
+                >
+                  Edit
+                </button>
+                <button
+                  onClick={() => deleteExpense(expense.id)}
+                  className="text-xs px-3 py-1.5 rounded-lg border border-red-200 text-red-400 hover:text-red-600 transition-colors"
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* Table (desktop only) */}
+      <div className="hidden md:block card overflow-hidden max-w-7xl mx-auto">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="border-b border-playa-mid/60 bg-playa-light/30">
@@ -513,10 +568,14 @@ export default function Expenses() {
         </div>
       </div>
 
-      {showModal && (
+      {(showModal || mobileEditExpense) && (
         <AddExpenseModal
-          onClose={() => setShowModal(false)}
-          onSubmit={addExpense}
+          onClose={() => { setShowModal(false); setMobileEditExpense(null) }}
+          initial={mobileEditExpense ?? undefined}
+          onSubmit={data => {
+            if (mobileEditExpense) updateExpense(mobileEditExpense.id, data)
+            else addExpense(data)
+          }}
         />
       )}
     </div>

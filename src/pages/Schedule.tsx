@@ -501,11 +501,15 @@ function CalendarGrid({
   onDelete,
   onEventClick,
   onSlotDoubleClick,
+  days = BURN_DAYS,
+  scrollHeight = 'calc(100vh - 210px)',
 }: {
   events: ScheduleEvent[]
   onDelete: (id: string) => void
   onEventClick: (event: ScheduleEvent) => void
   onSlotDoubleClick: (date: string, startTime: string) => void
+  days?: Date[]
+  scrollHeight?: string
 }) {
   const scrollRef = useRef<HTMLDivElement>(null)
 
@@ -519,7 +523,7 @@ function CalendarGrid({
   const today = isoDate(new Date())
 
   const byDay = new Map<string, ScheduleEvent[]>()
-  for (const day of BURN_DAYS) byDay.set(isoDate(day), [])
+  for (const day of days) byDay.set(isoDate(day), [])
   for (const ev of events) {
     byDay.get(ev.date)?.push(ev)
   }
@@ -552,7 +556,7 @@ function CalendarGrid({
         }}
       >
         <div style={{ width: 52, minWidth: 52 }} />
-        {BURN_DAYS.map(d => {
+        {days.map(d => {
           const key = isoDate(d)
           const isToday = key === today
           const weekend = d.getDay() === 0 || d.getDay() === 6
@@ -588,7 +592,7 @@ function CalendarGrid({
       <div
         ref={scrollRef}
         className="overflow-y-auto overflow-x-auto"
-        style={{ height: 'calc(100vh - 210px)' }}
+        style={{ height: scrollHeight }}
       >
         <div
           className="flex relative"
@@ -613,7 +617,7 @@ function CalendarGrid({
           </div>
 
           {/* Day columns */}
-          {BURN_DAYS.map(d => {
+          {days.map(d => {
             const key = isoDate(d)
             const dayEvents = byDay.get(key) || []
             const layouts = layoutDay(dayEvents)
@@ -666,7 +670,9 @@ function CalendarGrid({
         className="text-center py-1.5 text-[10px] shrink-0"
         style={{ color: 'rgba(155,112,144,0.4)', borderTop: '1px solid rgba(0,0,0,0.04)' }}
       >
-        Double-click any time slot to create an event · Click an event to view &amp; edit details
+        {days.length === 1
+          ? 'Double-tap a time slot to add an event · Tap an event for details'
+          : 'Double-click any time slot to create an event · Click an event to view & edit details'}
       </div>
     </div>
   )
@@ -680,6 +686,11 @@ export default function Schedule() {
   const [showForm, setShowForm] = useState(false)
   const [newEventSlot, setNewEventSlot] = useState<{ date: string; startTime: string } | null>(null)
   const [selectedEvent, setSelectedEvent] = useState<ScheduleEvent | null>(null)
+  const [mobileDayIdx, setMobileDayIdx] = useState(() => {
+    const todayStr = isoDate(new Date())
+    const idx = BURN_DAYS.findIndex(d => isoDate(d) === todayStr)
+    return idx >= 0 ? idx : 0
+  })
 
   const visibleEvents =
     activeTab === 'General'
@@ -735,13 +746,51 @@ export default function Schedule() {
         ))}
       </div>
 
-      {/* Calendar */}
-      <CalendarGrid
-        events={visibleEvents}
-        onDelete={deleteEvent}
-        onEventClick={setSelectedEvent}
-        onSlotDoubleClick={handleSlotDoubleClick}
-      />
+      {/* Mobile day picker */}
+      <div className="md:hidden flex gap-2 overflow-x-auto pb-1 shrink-0" style={{ scrollbarWidth: 'none' }}>
+        {BURN_DAYS.map((d, i) => {
+          const isToday = isoDate(d) === isoDate(new Date())
+          const isSelected = i === mobileDayIdx
+          return (
+            <button
+              key={isoDate(d)}
+              onClick={() => setMobileDayIdx(i)}
+              className="shrink-0 flex flex-col items-center px-3 py-1.5 rounded-xl transition-all"
+              style={{
+                background: isSelected ? '#FF2D78' : isToday ? 'rgba(255,45,120,0.1)' : 'rgba(0,0,0,0.04)',
+                color: isSelected ? '#fff' : isToday ? '#FF2D78' : 'rgba(155,112,144,0.85)',
+              }}
+            >
+              <span className="text-[10px] font-bold uppercase tracking-widest">
+                {d.toLocaleDateString('en-US', { weekday: 'short' })}
+              </span>
+              <span className="text-lg font-bold leading-tight">{d.getDate()}</span>
+            </button>
+          )
+        })}
+      </div>
+
+      {/* Mobile calendar (single day) */}
+      <div className="md:hidden">
+        <CalendarGrid
+          events={visibleEvents}
+          onDelete={deleteEvent}
+          onEventClick={setSelectedEvent}
+          onSlotDoubleClick={handleSlotDoubleClick}
+          days={[BURN_DAYS[mobileDayIdx]]}
+          scrollHeight="calc(100dvh - 320px)"
+        />
+      </div>
+
+      {/* Desktop calendar (full week) */}
+      <div className="hidden md:block">
+        <CalendarGrid
+          events={visibleEvents}
+          onDelete={deleteEvent}
+          onEventClick={setSelectedEvent}
+          onSlotDoubleClick={handleSlotDoubleClick}
+        />
+      </div>
 
       {showForm && (
         <AddEventModal

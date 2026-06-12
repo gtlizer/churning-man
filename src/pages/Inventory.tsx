@@ -128,8 +128,8 @@ export default function Inventory() {
   }
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
-      <div className="flex items-start justify-between mb-8">
+    <div className="p-4 md:p-6 max-w-4xl mx-auto">
+      <div className="flex items-start justify-between mb-5 md:mb-8">
         <div>
           <h1 className="section-title">Ice Cream Inventory</h1>
           <p className="section-subtitle">What we're bringing to the playa</p>
@@ -165,7 +165,7 @@ export default function Inventory() {
               <X size={18} />
             </button>
           </div>
-          <form onSubmit={handleSubmit} className="grid grid-cols-2 gap-3">
+          <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <input
               className="input col-span-2"
               placeholder="Flavor name (e.g. Strawberry Shortcake Bars)"
